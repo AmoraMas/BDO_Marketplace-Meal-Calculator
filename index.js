@@ -30,6 +30,8 @@ let allMaterialGroups = [];
 //  FUNCTIONS
 //
 
+// Function to run upon clicking the UPDATE button
+// Function will get the set language and region and pull main data dumps for later reference
 function updateLocationInfo() {
     language = $languageInput.val();
     region = $regionInput.val();
@@ -40,12 +42,14 @@ function updateLocationInfo() {
 }
 
 
+// Function to clean out the web page upon clicking on UPDATE button again
 function emptyTable() {
     $mealsList.empty();
     $ingredients.empty();
 }
 
 
+// Function to create local object consisting of information only on meals
 function getAllMeals() {
     console.log('Getting Meal List');
     let array = [];
@@ -63,6 +67,8 @@ function getAllMeals() {
 }
 
 
+// Function to draw first table on page
+// Function draws table of all in-game meals and lists all marketplace data for each meal
 function showMain(arrayOfObjects) {
     let $tableHeader = $('<div></div>').addClass('tableHeader').text('Meals you can Craft');
     $mealsList.append($tableHeader);
@@ -119,6 +125,7 @@ function showMain(arrayOfObjects) {
 }
 
 
+// Function to draw on page the ingredients required for each clicked on recipe
 function showIngredients(itemName) {
     //console.log(itemName);
     let cantFindIt = true;
@@ -146,6 +153,7 @@ function showIngredients(itemName) {
             $thead.append($trhead);
             $table.append($thead);
             let $tbody = $('<tbody></tbody>').addClass('tbody');
+            // Table row for if the entry is a material group instead of an ingredient
             for (let j = 0; j < allRecipies[i].components.length; j++) {
                 let $name;
                 let $price;
@@ -165,6 +173,7 @@ function showIngredients(itemName) {
                     $tr.append($numListed);
                     $tbody.append($tr);
                 }
+                // Table row for if the entry is a regular ingredient
                 else {
                     $('<td></td>').text($.get(`https://api.arsha.io/v1/${region}/item?id=${allRecipies[i].components[j].id}`, (data) => {
                         let $tr = $('<tr></tr>');
@@ -225,6 +234,9 @@ function showIngredients(itemName) {
     }
 }
 
+
+// Function to draw a table in the ingredients area the items that make up a Material Group
+// The material group is a list of items that can be substituted into the recipe (pick any of)
 function showMaterialGroup(materialGroupNumber) {
     console.log('Getting Material Group List: ', materialGroupNumber);
     for (let i = 0; i < allMaterialGroups.length; i++) {
