@@ -1,4 +1,7 @@
 
+// API was from 
+// https://documenter.getpostman.com/view/4028519/TzK2bEVg
+
 // Set default location info
 let language = 'en';    // Englist
 let region = 'console_na';      // North America (PC)
