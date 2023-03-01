@@ -22,9 +22,9 @@ const $mealsList = $('.meals');
 const $ingredients = $('.ingredients');
 
 // Additional Global Variables
-let allItems = [];
-let allRecipies = [];
-let allMaterialGroups = [];
+let allItems = {};
+let allRecipies = {};
+let allMaterialGroups = {};
 
 // 
 //  FUNCTIONS
@@ -36,9 +36,45 @@ function updateLocationInfo() {
     language = $languageInput.val();
     region = $regionInput.val();
     emptyTable();
-    $.get(`https://api.arsha.io/util/db/dump?lang=${language}`, (data) => { allItems = data; getAllMeals(); });
-    $.get(`https://api.arsha.io/util/db/recipes/dump?lang=${language}`, (data) => { allRecipies = data; });
-    $.get(`https://api.arsha.io/util/db/recipes/matgroups/dump?lang=${language}`, (data) => { allMaterialGroups = data; });
+
+    // get all game items, alters the data structure, and caches locally (references name/icon data vs displaying ID to user)
+    // API provides data in an array that has to be parsed through to find a particular id. This way, can reference in o[1] time.
+    // required to retrieve entire list to filter to items we want to initially show (meals in this case) and get their IDs.
+    $.get(`https://api.arsha.io/util/db/dump?lang=${language}`, (data) => { 
+        for (let i = 0; i < data.length; i++){
+            allItems[data[i].id] = {
+                name: data[i].name,
+                icon: data[i].icon,
+                grade: data[i].grade
+            };
+        }
+        getAllMeals(); 
+    });
+
+    // get all game recipies, alters the data structure and caches locally (references all the ingredients for each recipe)
+    // API provides data in an array that has to be parsed through to find a particular id. This way, can reference in o[1] time.
+    // have to retrieve entire list because API only allows calling by ID. There is no referrence for ID between items/ingredients and recipies
+    $.get(`https://api.arsha.io/util/db/recipes/dump?lang=${language}`, (data) => { 
+        for (let i = 0; i < data.length; i++) {
+            allRecipies[data[i].name] = {
+                exp: data[i].exp,
+                level: data[i].level,
+                lifeskill: data[i].lifeskill,
+                id: data[i].id,
+                products: data[i].products,
+                components: data[i].components
+            };
+        }
+    });
+
+    // get all material groups and the ingredients that make them up. Alter the data slightly to reduce nesting and increase lookup speed
+    $.get(`https://api.arsha.io/util/db/recipes/matgroups/dump?lang=${language}`, (data) => { 
+        for (let i = 0; i < data.length; i++) {
+            allMaterialGroups[data[i].id] = {
+                mg: data[i].mg
+            }; 
+        }
+    });
 }
 
 
@@ -52,24 +88,25 @@ function emptyTable() {
 // Function to create local object consisting of information only on meals
 function getAllMeals() {
     console.log('Getting Meal List');
-    let array = [];
-    for (let i = 0; i < allItems.length; i++) {
-        if (allItems[i].name.includes('Meal') && !allItems[i].name.includes('[Event]') && !allItems[i].name.includes('Special')) {
-            let object = {};
-            object['name'] = allItems[i].name;
-            object['id'] = allItems[i].id;
-            object['icon'] = allItems[i].icon;
-            array.push(object);
+    let filteredList = {};
+    for (let key in allItems) {
+        if (allItems[key].name.includes('Meal') && !allItems[key].name.includes('[Event]') && !allItems[key].name.includes('Special')) {
+            filteredList[key] = {
+                name: allItems[key].name,
+                icon: allItems[key].icon
+            }
         }
     }
-    //console.log(array);
-    showMain(array);
+    // console.log(filteredList);
+    // console.log(filteredList[45406]);
+    // console.log(filteredList['45406']['icon']);
+    showMain(filteredList);
 }
 
 
 // Function to draw first table on page
 // Function draws table of all in-game meals and lists all marketplace data for each meal
-function showMain(arrayOfObjects) {
+function showMain (itemList) {
     let $tableHeader = $('<div></div>').addClass('tableHeader').text('Meals you can Craft');
     $mealsList.append($tableHeader);
 
@@ -86,22 +123,26 @@ function showMain(arrayOfObjects) {
     $table.append($thead);
 
     let $tbody = $('<tbody></tbody>').addClass('tbody')
-    for (let i = 0; i < arrayOfObjects.length; i++) {
-        $.get(`https://api.arsha.io/v1/${region}/item?id=${arrayOfObjects[i].id}`, (data) => {
-            //console.log('data: ', data);
-            //console.log('Msg: ', data.resultMsg);
+    for (let id in itemList) {
+        $.get(`https://api.arsha.io/v1/${region}/item?id=${id}`, (data) => {
+            // If we get data from the filtering function
             if (data.resultMsg != '0') {
-                let itemName = arrayOfObjects[i].name;
-                //console.log('Item: ', itemName);
+                let itemName = itemList[id].name;
+                // Make reading easier by replacing apostrophes
                 if (itemName.includes(`&#39;`)) {
-                    itemName = itemName.replace('&#39;', '\'')
+                    itemName = itemName.replace('&#39;', '\'');
                 }
-                let simplerData = (data.resultMsg).split('-');
+                // Make reading easier by replacing pipe at the end
+                let simplerData = data.resultMsg.replace('|', '');
+                // Split the data up into an array to make writing to page easier
+                simplerData = simplerData.split('-');
+
+                // Creating the row for the page
                 let $tr = $('<tr></tr>');
-                //console.log(simplerData);
+                // Iterate through all provided fields of an item to populate the row
                 for (let i = 0; i < simplerData.length; i++) {
-                    //console.log('element; ', [i], 'data: ', simplerData[i]);
                     let $td = $('<td></td>');
+                    // Make the first column clickable
                     if (i == 0) {
                         $td.text(itemName).addClass('link');
                         $td.click((data) => {
@@ -127,100 +168,10 @@ function showMain(arrayOfObjects) {
 
 // Function to draw on page the ingredients required for each clicked on recipe
 function showIngredients(itemName) {
-    //console.log(itemName);
     let cantFindIt = true;
     console.log('Getting Ingredient List: ', itemName);
-    for (let i = 0; i < allRecipies.length; i++) {
-        if (allRecipies[i].name == itemName) {
-            console.log(allRecipies[i]);
-            let id = allRecipies[i].id;
 
-            let $container = $('<div></div>').addClass('ingredient-list');
-
-            let $header = $('<div></div>').addClass('tableHeader');
-            $header.text(`${itemName}   (${allRecipies[i].level})`);
-            $container.append($header);
-
-            let $table = $('<table></table>').addClass('table');
-
-            let headers = ['Quantity', 'Name', 'Price', '# Listed'];
-            let $thead = $('<thead></thead>').addClass('thead')
-            let $trhead = $('<tr></tr>');
-            for (let i = 0; i < headers.length; i++) {
-                let $th = $('<th></th>').text(headers[i]);
-                $trhead.append($th);
-            }
-            $thead.append($trhead);
-            $table.append($thead);
-            let $tbody = $('<tbody></tbody>').addClass('tbody');
-            // Table row for if the entry is a material group instead of an ingredient
-            for (let j = 0; j < allRecipies[i].components.length; j++) {
-                let $name;
-                let $price;
-                let $numListed;
-                console.log('Getting Ingredient: ', allRecipies[i].components[j].id);
-                if ('materialGroup' in allRecipies[i].components[j]) {
-                    let $tr = $('<tr></tr>');
-                    let $quantity = $('<td></td>').text(allRecipies[i].components[j].quantity);
-                    $name = $('<td></td>').text(`Material Group ${allRecipies[i].components[j].materialGroup}`).addClass('link');
-                    $name.click(function () { showMaterialGroup(allRecipies[i].components[j].materialGroup) });
-                    $price = $('<td></td>').text('---');
-                    $numListed = $('<td></td>').text('---');
-
-                    $tr.append($quantity);
-                    $tr.append($name);
-                    $tr.append($price);
-                    $tr.append($numListed);
-                    $tbody.append($tr);
-                }
-                // Table row for if the entry is a regular ingredient
-                else {
-                    $('<td></td>').text($.get(`https://api.arsha.io/v1/${region}/item?id=${allRecipies[i].components[j].id}`, (data) => {
-                        let $tr = $('<tr></tr>');
-                        let quantity = allRecipies[i].components[j].quantity;
-                        let $quantity = $('<td></td>').text(quantity);
-                        let id = allRecipies[i].id;
-                        for (let k = 0; k < allItems.length; k++) {
-                            if (allItems[k].id == allRecipies[i].components[j].id) {
-                                let name = allItems[k].name;
-                                let price = (data.resultMsg).split('-')[8];
-                                let numListed = (data.resultMsg).split('-')[4];
-
-                                $name = $('<td></td>').text(name).addClass('link');
-                                $name.click(function () { showIngredients(name) });
-                                $price = $('<td></td>').text(price);
-                                $numListed = $('<td></td>').text(numListed);
-
-                                if (!isNaN(price) && price != undefined) {
-                                    console.log('Total 1: ', $('.total.' + id).text());
-                                    $('.total.' + id).text(Number($('.total.' + id).text()) + Number(price) * Number(quantity));
-                                    console.log('Total 2: ', $('.total.' + id).text());
-                                }
-                                break;
-                            }
-                        }
-                        $tr.append($quantity);
-                        $tr.append($name);
-                        $tr.append($price);
-                        $tr.append($numListed);
-                        $tbody.append($tr);
-                    }));
-                }
-            }
-            $table.append($tbody);
-            $container.append($table);
-            $ingredients.append($container);
-            $totalDivs = $('<div></div>').addClass('totalDivs')
-            $totalLabel = $('<div></div>').addClass('total').text('Total Cost: ');
-            $totalDiv = $('<div></div>').addClass('total ' + id).text('0');
-            $totalDivs.append($totalLabel);
-            $totalDivs.append($totalDiv);
-            $container.append($totalDivs);
-            cantFindIt = false;
-            break;
-        }
-    }
-    if (cantFindIt) {
+    if (!allRecipies[itemName]) {
         let $container = $('<div></div>').addClass('ingredient-list');
 
         let $header = $('<div></div>').addClass('tableHeader');
@@ -232,62 +183,131 @@ function showIngredients(itemName) {
         $container.append($errorText);
         $ingredients.append($container);
     }
+    else {
+        let id = allRecipies[itemName].id;
+
+        let $container = $('<div></div>').addClass('ingredient-list');
+
+        let $header = $('<div></div>').addClass('tableHeader');
+        $header.text(`${itemName}   (${allRecipies[itemName].level})`);
+        $container.append($header);
+
+        let $table = $('<table></table>').addClass('table');
+
+        let headers = ['Quantity', 'Name', 'Price', '# Listed'];
+        let $thead = $('<thead></thead>').addClass('thead')
+        let $trhead = $('<tr></tr>');
+        for (let i = 0; i < headers.length; i++) {
+            let $th = $('<th></th>').text(headers[i]);
+            $trhead.append($th);
+        }
+        $thead.append($trhead);
+        $table.append($thead);
+        let $tbody = $('<tbody></tbody>').addClass('tbody');
+        for (let i = 0; i < allRecipies[itemName].components.length; i++) {
+            let $name;
+            let $price;
+            let $numListed;
+            
+            // Table row for if the entry is a material group instead of an ingredient
+            if ('materialGroup' in allRecipies[itemName].components[i]) {
+                console.log('Getting Ingredient:  mg', allRecipies[itemName].components[i].materialGroup);
+                let $tr = $('<tr></tr>');
+                let $quantity = $('<td></td>').text(allRecipies[itemName].components[i].quantity);
+                $name = $('<td></td>').text(`Material Group ${allRecipies[itemName].components[i].materialGroup}`).addClass('link');
+                $name.click(function () { showMaterialGroup(allRecipies[itemName].components[i].materialGroup) });
+                $price = $('<td></td>').text('---');
+                $numListed = $('<td></td>').text('---');
+                
+                $tr.append($quantity);
+                $tr.append($name);
+                $tr.append($price);
+                $tr.append($numListed);
+                $tbody.append($tr);
+            }
+            
+            // Table row for if the entry is a regular ingredient
+            else {
+                console.log('Getting Ingredient: ', allRecipies[itemName].components[i].id);
+                $('<td></td>').text($.get(`https://api.arsha.io/v1/${region}/item?id=${allRecipies[itemName].components[i].id}`, (data) => {
+                    let $tr = $('<tr></tr>');
+                    let quantity = allRecipies[itemName].components[i].quantity;
+                    let $quantity = $('<td></td>').text(quantity);
+                    let id = allRecipies[itemName].id;
+                    let name = allItems[allRecipies[itemName].components[i].id].name;
+                    let price = (data.resultMsg).split('-')[8];
+                    let numListed = (data.resultMsg).split('-')[4];
+
+                    $name = $('<td></td>').text(name).addClass('link');
+                    $name.click(function () { showIngredients(name) });
+                    $price = $('<td></td>').text(price);
+                    $numListed = $('<td></td>').text(numListed);
+
+                    if (!isNaN(price) && price != undefined) {
+                        $('.total.' + id).text(Number($('.total.' + id).text()) + Number(price) * Number(quantity));
+                    }
+                    $tr.append($quantity);
+                    $tr.append($name);
+                    $tr.append($price);
+                    $tr.append($numListed);
+                    $tbody.append($tr);
+                }));
+            }
+        }
+        $table.append($tbody);
+        $container.append($table);
+        $ingredients.append($container);
+        $totalDivs = $('<div></div>').addClass('totalDivs')
+        $totalLabel = $('<div></div>').addClass('total').text('Total Cost: ');
+        $totalDiv = $('<div></div>').addClass('total ' + id).text('0');
+        $totalDivs.append($totalLabel);
+        $totalDivs.append($totalDiv);
+        $container.append($totalDivs);
+    }
 }
 
 
 // Function to draw a table in the ingredients area the items that make up a Material Group
 // The material group is a list of items that can be substituted into the recipe (pick any of)
-function showMaterialGroup(materialGroupNumber) {
-    console.log('Getting Material Group List: ', materialGroupNumber);
-    for (let i = 0; i < allMaterialGroups.length; i++) {
-        if (allMaterialGroups[i].id == materialGroupNumber) {
-            console.log(allMaterialGroups[i]);
-            let $container = $('<div></div>').addClass('materialGroup-list');
-            let $header = $('<div></div>').addClass('tableHeader');
-            $header.text(`Material Group: ${materialGroupNumber}`);
-            $container.append($header);
+function showMaterialGroup(mgID) {
+    console.log('Getting Material Group List: ', mgID);
+    console.log(allMaterialGroups[mgID]);
+    let $container = $('<div></div>').addClass('materialGroup-list');
+    let $header = $('<div></div>').addClass('tableHeader');
+    $header.text(`Material Group: ${mgID}`);
+    $container.append($header);
 
-            let $table = $('<table></table>').addClass('table');
+    let $table = $('<table></table>').addClass('table');
 
-            let headers = ['Name', 'Price', '# Listed'];
-            let $thead = $('<thead></thead>').addClass('thead')
-            let $trhead = $('<tr></tr>');
-            for (let i = 0; i < headers.length; i++) {
-                let $th = $('<th></th>').text(headers[i]);
-                $trhead.append($th);
-            }
-            $thead.append($trhead);
-            $table.append($thead);
-
-            let $tbody = $('<tbody></tbody>').addClass('tbody');
-            let keys = Object.keys(allMaterialGroups[i].mg);
-
-            for (let j = 0; j < keys.length; j++) {
-                console.log('Getting Ingredient: ', keys[j]);
-
-                $('<td></td>').text($.get(`https://api.arsha.io/v1/${region}/item?id=${allMaterialGroups[i].mg[keys[j]].id}`, (data) => {
-                    let $name;
-                    let $price;
-                    let $numListed;
-                    let $tr = $('<tr></tr>');
-                    for (let k = 0; k < allItems.length; k++) {
-                        if (allItems[k].id == allMaterialGroups[i].mg[keys[j]].id) {
-                            $name = $('<td></td>').text(allMaterialGroups[i].mg[keys[j]].name);
-                            $price = $('<td></td>').text((data.resultMsg).split('-')[8]);
-                            $numListed = $('<td></td>').text((data.resultMsg).split('-')[4]);
-                            $tr.append($name);
-                            $tr.append($price);
-                            $tr.append($numListed);
-                            $tbody.append($tr);
-                            break;
-                        }
-                    }
-                }));
-            }
-            $table.append($tbody);
-            $container.append($table);
-            $ingredients.append($container);
-            break;
-        }
+    let headers = ['Name', 'Price', '# Listed'];
+    let $thead = $('<thead></thead>').addClass('thead')
+    let $trhead = $('<tr></tr>');
+    for (let i = 0; i < headers.length; i++) {
+        let $th = $('<th></th>').text(headers[i]);
+        $trhead.append($th);
     }
+    $thead.append($trhead);
+    $table.append($thead);
+
+    let $tbody = $('<tbody></tbody>').addClass('tbody');
+
+    for (let key in allMaterialGroups[mgID].mg) {
+        console.log('Getting Ingredient: ', allMaterialGroups[mgID].mg[key].name);
+        $('<td></td>').text($.get(`https://api.arsha.io/v1/${region}/item?id=${key}`, (data) => {
+            let $name;
+            let $price;
+            let $numListed;
+            let $tr = $('<tr></tr>');
+            $name = $('<td></td>').text(allMaterialGroups[mgID].mg[key].name);
+            $price = $('<td></td>').text((data.resultMsg).split('-')[8]);
+            $numListed = $('<td></td>').text((data.resultMsg).split('-')[4]);
+            $tr.append($name);
+            $tr.append($price);
+            $tr.append($numListed);
+            $tbody.append($tr);
+        }));
+    }
+    $table.append($tbody);
+    $container.append($table);
+    $ingredients.append($container);
 }
