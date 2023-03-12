@@ -113,7 +113,9 @@ function showMain (itemList) {
     let $table = $('<table></table>').addClass('table');
 
     let $thead = $('<thead></thead>').addClass('thead');
-    let headers = ['Item', 'Min Enhance', 'Max Enhance', 'Base Price', '# Listed', 'Total Trades', 'Min Price', 'Max Price', 'Last Sold Price', 'Last Sold Time'];
+    // following commented out line is for showing all columns availaible. Replaced to not show Min/Max Enhance as meals have not enhancements
+    // let headers = ['Item', 'Min Enhance', 'Max Enhance', 'Base Price', '# Listed', 'Total Trades', 'Min Price', 'Max Price', 'Last Sold Price', 'Last Sold Time'];
+    let headers = ['Item', 'Base Price', '# Listed', 'Total Trades', 'Min Price', 'Max Price', 'Last Sold Price', 'Last Sold Time'];
     let $tr = $('<tr></tr>');
     for (let i = 0; i < headers.length; i++) {
         let $th = $('<th></th>').text(headers[i]);
@@ -150,6 +152,14 @@ function showMain (itemList) {
                             showIngredients(itemName);
                             $tr.addClass('selected').siblings().removeClass('selected');
                         });
+                    }
+                    else if (i == 1 || i == 2) {  // Used to skip min/max enhancements as meals have none
+                        continue;
+                    }
+                    else if (i == simplerData.length-1) {
+                        // shows Last Sold Time in user's local time zone
+                        let lastSoldTime = new Date(simplerData[i]*1000).toLocaleString();
+                        $td.text(lastSoldTime);
                     }
                     else {
                         $td.text(simplerData[i]);
