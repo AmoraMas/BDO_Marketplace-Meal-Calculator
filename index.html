@@ -1,68 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="index.css" />
     <script defer src="index.js"></script>
     <title>BDO Meal Calculator</title>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="everything">
-        <div class="page-title">
-            BDO Meal Calculator
+      <div class="page-title">BDO Meal Calculator</div>
+      <div class="location-controls">
+        <div class="language">
+          <label for="language">Chose your language</label>
+          <select name="language" id="language">
+            <option value="en">English</option>
+            <option value="de">German</option>
+            <option value="fr">French</option>
+            <option value="ru">Russian</option>
+            <option value="es">Spanish (EU)</option>
+            <option value="sp">Portuguese (RedFox)</option>
+            <option value="pt">Portuguese</option>
+            <option value="jp">Japanese</option>
+            <option value="kr">Korean</option>
+            <option value="th">Thai</option>
+            <option value="tr">Turkish</option>
+            <option value="tw">Chinese (Taiwan)</option>
+            <option value="cn">Chinese (Mainland)</option>
+          </select>
         </div>
-        <div class="location-controls">
-            <div class="language">
-                <label for="language">Chose your language</label>
-                <select name="language" id="language">
-                    <option value="en">English</option>
-                    <option value="de">German</option>
-                    <option value="fr">French</option>
-                    <option value="ru">Russian</option>
-                    <option value="es">Spanish (EU)</option>
-                    <option value="sp">Portuguese (RedFox)</option>
-                    <option value="pt">Portuguese</option>
-                    <option value="jp">Japanese</option>
-                    <option value="kr">Korean</option>
-                    <option value="th">Thai</option>
-                    <option value="tr">Turkish</option>
-                    <option value="tw">Chinese (Taiwan)</option>
-                    <option value="cn">Chinese (Mainland)</option>
-                </select>
-            </div>
 
-            <div class="region">
-                <label for="region">Chose your region</label>
-                <select name="region" id="region">
-                    <option value="na">North America (PC)</option>
-                    <option value="eu">Europe (PC)</option>
-                    <option value="sea">SEA (PC)</option>
-                    <option value="mena">MENA (PC)</option>
-                    <option value="kr">Korea (PC)</option>
-                    <option value="ru">Russia (PC)</option>
-                    <option value="jp">Japan (PC)</option>
-                    <option value="th">Thailand (PC)</option>
-                    <option value="tw">Taiwan (PC)</option>
-                    <option value="sa">SA (PC)</option>
-                    <option value="console_eu">Europe (Console)</option>
-                    <option value="console_na">North America (Console)</option>
-                    <option value="console_asia">Asia (Console)</option>
-                </select>
-            </div>
-
-            <button id="update-location">Update</button>
-            <br>
-
-            <div class='warning'>Be careful! Not every language is available in every region!</div>
-
+        <div class="region">
+          <label for="region">Chose your region</label>
+          <select name="region" id="region">
+            <option value="na">North America (PC)</option>
+            <option value="eu">Europe (PC)</option>
+            <option value="sea">SEA (PC)</option>
+            <option value="mena">MENA (PC)</option>
+            <option value="kr">Korea (PC)</option>
+            <option value="ru">Russia (PC)</option>
+            <option value="jp">Japan (PC)</option>
+            <option value="th">Thailand (PC)</option>
+            <option value="tw">Taiwan (PC)</option>
+            <option value="sa">SA (PC)</option>
+            <option value="console_eu">Europe (Console)</option>
+            <option value="console_na">North America (Console)</option>
+            <option value="console_asia">Asia (Console)</option>
+          </select>
         </div>
-        <hr>
-        <!--
+
+        <button id="update-location">Update</button>
+        <br />
+
+        <div class="warning">
+          Be careful! Not every language is available in every region!
+        </div>
+        <br />
+        <div class="warning">
+          Recipies from this API are no longer pointing to the correct item ID
+        </div>
+        <div class="warning">
+          Until this is fixed, this application can not work as intended
+        </div>
+      </div>
+      <hr />
+      <!--
         <div class="quickControls">
             <button id="quickMarketList">Market List</button>
             <button id="quickHotList">Hot List</button>
@@ -70,15 +75,9 @@
             <button id="quickHideList">Hide</button>
         </div>
         -->
-        <div class="meals">
-
-        </div>
-        <hr>
-        <div class="ingredients">
-
-        </div>
+      <div class="meals"></div>
+      <hr />
+      <div class="ingredients"></div>
     </div>
-
-</body>
-
+  </body>
 </html>
